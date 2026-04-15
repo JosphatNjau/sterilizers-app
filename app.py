@@ -85,6 +85,7 @@ def export_pdf(fig, df):
     fig.write_image(
         filename,
         format="pdf",
+        engine="kaleido",
         width=1700,
         height=1000,
         scale=2
