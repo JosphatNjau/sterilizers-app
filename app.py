@@ -75,22 +75,13 @@ def create_chart(df):
 
     return fig
 
-def export_image(fig, df):
+def export_report(fig, df):
     f_date = pd.to_datetime(df['Date'].iloc[0]).strftime("%d-%m-%Y")
-    filename = f"{df['Shift'].iloc[0]}_staggering_{f_date}.png"
+    filename = f"{df['Shift'].iloc[0]}_staggering_{f_date}.html"
 
-    buf = io.BytesIO()
+    html = fig.to_html()
 
-    fig.write_image(
-        buf,
-        format="png",
-        width=1700,
-        height=1000,
-        scale=2
-    )
-
-    buf.seek(0)
-    return buf, filename
+    return html.encode("utf-8"), filename
 
 # UI
 uploaded_file = st.file_uploader("📂 Upload Excel File", type=["xlsx"])
@@ -122,14 +113,14 @@ if uploaded_file:
 
         with col1:
             if st.button("📄 Generate Report"):
-                img_bytes, filename = export_image(fig, df)
+                file_bytes, filename = export_report(fig, df)
                 st.success(f"Report generated: {filename}")
 
                 st.download_button(
                     "⬇️ Download Report",
-                    data=img_bytes,
+                    data=file_bytes,
                     file_name=filename,
-                    mime="image/png"
+                    mime="text/html"
                 )
 
         st.markdown("---")
