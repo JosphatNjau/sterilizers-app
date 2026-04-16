@@ -99,7 +99,7 @@ def export_pdf(df):
                 (row['datetime'], row['sequence']),
                 textcoords="offset points",
                 xytext=(-5, 8),   # left + up offset
-                ha='left',
+                ha='right',
                 fontsize=9,
                 fontweight='bold'
             )
@@ -145,7 +145,7 @@ if uploaded_file:
             st.dataframe(df.head())
 
         fig = create_chart(df)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
         if st.button("Generate PDF Report"):
 
@@ -160,4 +160,4 @@ if uploaded_file:
                 mime="application/pdf"
             )
 
-st.caption("Built with Streamlit")
+st.caption("Built with Streamlit | Joes Njau")
