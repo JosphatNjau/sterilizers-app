@@ -99,8 +99,8 @@ def export_pdf(df):
                 row['sequence'] + 0.25,
                 row['label'],
                 ha='left',
-                va='bottom',
-                fontsize=12,
+                va='top',
+                fontsize=10,
                 fontweight='bold'
             )
 
