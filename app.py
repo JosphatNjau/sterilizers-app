@@ -5,15 +5,13 @@ import plotly.express as px
 from datetime import time
 from pypdf import PdfReader, PdfWriter
 import os
+import io
 
 st.set_page_config(page_title="Sterilizer Staggering", layout="wide")
 
 st.title("📊 Sterilizer Staggering Report Generator")
 
-# -------------------------------
 # Helper Functions
-# -------------------------------
-
 @st.cache_data
 def process_data(df):
     df = df.copy()
@@ -77,24 +75,24 @@ def create_chart(df):
 
     return fig
 
-
-def export_pdf(fig, df):
+def export_image(fig, df):
     f_date = pd.to_datetime(df['Date'].iloc[0]).strftime("%d-%m-%Y")
-    filename = f"{df['Shift'].iloc[0]}_staggering_{f_date}.pdf"
+    filename = f"{df['Shift'].iloc[0]}_staggering_{f_date}.png"
+
+    buf = io.BytesIO()
 
     fig.write_image(
-        filename,
-        format="pdf",
-        engine="kaleido",
+        buf,
+        format="png",
         width=1700,
         height=1000,
         scale=2
     )
 
-    return filename
+    buf.seek(0)
+    return buf, filename
 
-
-def update_master_pdf(new_pdf, master_pdf="Master_Staggering_Report.pdf"):
+'''def update_master_pdf(new_pdf, master_pdf="Master_Staggering_Report.pdf"):
     writer = PdfWriter()
 
     # Add new report first
@@ -115,13 +113,9 @@ def update_master_pdf(new_pdf, master_pdf="Master_Staggering_Report.pdf"):
 
     os.replace(temp_output, master_pdf)
 
-    return master_pdf
+    return master_pdf'''
 
-
-# -------------------------------
 # UI
-# -------------------------------
-
 uploaded_file = st.file_uploader("📂 Upload Excel File", type=["xlsx"])
 
 if uploaded_file:
@@ -147,31 +141,19 @@ if uploaded_file:
 
         st.plotly_chart(fig, width='stretch')
 
-        col1, col2 = st.columns(2)
+        col1 = st.columns(1)
 
         with col1:
-            if st.button("📄 Generate PDF"):
-                filename = export_pdf(fig, df)
+            if st.button("📄 Generate Report"):
+                img_bytes, filename = export_image(fig, df)
                 st.success(f"PDF generated: {filename}")
 
-                with open(filename, "rb") as f:
-                    st.download_button(
-                        "⬇️ Download PDF",
-                        f,
-                        file_name=filename
-                    )
-
-        with col2:
-            if st.button("📚 Update Master Report"):
-                filename = export_pdf(fig, df)
-                master = update_master_pdf(filename)
-
-                with open(master, "rb") as f:
-                    st.download_button(
-                        "⬇️ Download Master Report",
-                        f,
-                        file_name=master
-                    )
+                st.download_button(
+                    "⬇️ Download Report",
+                    data=img_bytes,
+                    file_name=filename,
+                    mime="image/png"
+                )
 
         st.markdown("---")
         st.caption("Built with Streamlit | Josphat Njau")
