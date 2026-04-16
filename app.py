@@ -94,13 +94,13 @@ def export_pdf(df):
 
         # Labels above points
         for i, row in df.iterrows():
-            ax.text(
-                row['datetime'],
-                row['sequence'] + 0.25,
+            ax.annotate(
                 row['label'],
-                ha='right',
-                va='top',
-                fontsize=10,
+                (row['datetime'], row['sequence']),
+                textcoords="offset points",
+                xytext=(-5, 8),   # left + up offset
+                ha='left',
+                fontsize=9,
                 fontweight='bold'
             )
 
