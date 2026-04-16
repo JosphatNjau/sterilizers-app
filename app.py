@@ -122,7 +122,7 @@ def export_pdf(df):
     # PDF (full page image)
     page_width, page_height = landscape(A4)
 
-    image = ImageReader(img_buffer)
+    img = ImageReader(img_buffer)
 
     img_width = page_width
     img_height = page_height
