@@ -92,29 +92,6 @@ def export_image(fig, df):
     buf.seek(0)
     return buf, filename
 
-'''def update_master_pdf(new_pdf, master_pdf="Master_Staggering_Report.pdf"):
-    writer = PdfWriter()
-
-    # Add new report first
-    reader_new = PdfReader(new_pdf)
-    for page in reader_new.pages:
-        writer.add_page(page)
-
-    # Append existing master
-    if os.path.exists(master_pdf):
-        reader_old = PdfReader(master_pdf)
-        for page in reader_old.pages:
-            writer.add_page(page)
-
-    temp_output = "temp_master.pdf"
-
-    with open(temp_output, "wb") as f:
-        writer.write(f)
-
-    os.replace(temp_output, master_pdf)
-
-    return master_pdf'''
-
 # UI
 uploaded_file = st.file_uploader("📂 Upload Excel File", type=["xlsx"])
 
@@ -141,12 +118,12 @@ if uploaded_file:
 
         st.plotly_chart(fig, width='stretch')
 
-        col1 = st.columns(1)
+        col1, = st.columns(1)
 
         with col1:
             if st.button("📄 Generate Report"):
                 img_bytes, filename = export_image(fig, df)
-                st.success(f"PDF generated: {filename}")
+                st.success(f"Report generated: {filename}")
 
                 st.download_button(
                     "⬇️ Download Report",
