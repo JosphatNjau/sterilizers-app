@@ -98,7 +98,7 @@ def export_pdf(df):
                 row['datetime'],
                 row['sequence'] + 0.25,
                 row['label'],
-                ha='left',
+                ha='right',
                 va='top',
                 fontsize=10,
                 fontweight='bold'
