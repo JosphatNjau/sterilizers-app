@@ -65,7 +65,7 @@ def create_chart(df):
 
     fig.update_layout(
         title=f"Staggering - {shift} - {date_str}",
-        height=700,
+        height=500,
         width=1700,
         title_font=dict(size=20),
         xaxis_title="Process Time",
