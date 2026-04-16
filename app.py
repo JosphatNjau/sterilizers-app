@@ -2,10 +2,13 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-from datetime import time
-from pypdf import PdfReader, PdfWriter
-import os
 import io
+import matplotlib.pyplot as plt
+
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import inch
 
 st.set_page_config(page_title="Sterilizer Staggering", layout="wide")
 
@@ -23,7 +26,6 @@ def process_data(df):
         df['Date'].astype(str) + ' ' + df['process_time'].dt.strftime('%H:%M:%S')
     )
 
-    # Fix night shift rollover
     df.loc[(df['Shift'] == 'Night') & (df['datetime'].dt.hour < 12), 'datetime'] += pd.Timedelta(days=1)
 
     df['Staggering'] = np.where(
@@ -39,7 +41,6 @@ def process_data(df):
     df['sequence'] = range(1, len(df) + 1)
 
     return df.reset_index(drop=True)
-
 
 def create_chart(df):
     plot_date = pd.to_datetime(df['Date'].iloc[0]).strftime("%d/%m/%Y")
@@ -67,21 +68,69 @@ def create_chart(df):
 
     fig.update_yaxes(title="Process Order")
 
-    fig.update_layout(
-        height=700,
-        width=1700,
-        title_font=dict(family="Times New Roman", weight="bold", size=20)
-    )
+    fig.update_layout(height=700, width=1700)
 
     return fig
 
-def export_report(fig, df):
-    f_date = pd.to_datetime(df['Date'].iloc[0]).strftime("%d-%m-%Y")
-    filename = f"{df['Shift'].iloc[0]}_staggering_{f_date}.html"
+# Matplotlib Chart for PDF
 
-    html = fig.to_html()
+def create_matplotlib_chart(df):
+    fig, ax = plt.subplots(figsize=(11, 5))
 
-    return html.encode("utf-8"), filename
+    ax.plot(df['datetime'], df['sequence'], marker='D')
+
+    for _, row in df.iterrows():
+        ax.text(row['datetime'], row['sequence'], row['label'], fontsize=7)
+
+    ax.set_title(f"Sterilizer Staggering - {df['Shift'].iloc[0]}")
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Process Order")
+
+    fig.autofmt_xdate()
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=300, bbox_inches='tight')
+    plt.close(fig)
+
+    buf.seek(0)
+    return buf
+
+# PDF Generator (A4)
+def generate_pdf(df):
+    buffer = io.BytesIO()
+
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    styles = getSampleStyleSheet()
+
+    elements = []
+
+    # --- Header / Branding ---
+    title = Paragraph("<b>Sterilizer Staggering Report</b>", styles['Title'])
+    subtitle = Paragraph(
+        f"Date: {df['Date'].iloc[0].strftime('%d %b %Y')} | Shift: {df['Shift'].iloc[0]}",
+        styles['Normal']
+    )
+
+    elements.append(title)
+    elements.append(Spacer(1, 10))
+    elements.append(subtitle)
+    elements.append(Spacer(1, 20))
+
+    # --- Chart ---
+    chart_img = create_matplotlib_chart(df)
+    img = Image(chart_img, width=6.5 * inch, height=3.5 * inch)
+
+    elements.append(img)
+    elements.append(Spacer(1, 20))
+
+    # --- Footer ---
+    footer = Paragraph("Generated via Streamlit | Josphat Njau", styles['Normal'])
+    elements.append(footer)
+
+    doc.build(elements)
+
+    buffer.seek(0)
+    return buffer
 
 # UI
 uploaded_file = st.file_uploader("📂 Upload Excel File", type=["xlsx"])
@@ -101,27 +150,23 @@ if uploaded_file:
 
         st.success("✅ Data processed successfully")
 
-        # Show preview
         with st.expander("🔍 Preview Data"):
             st.dataframe(df.head())
 
         fig = create_chart(df)
-
         st.plotly_chart(fig, width='stretch')
 
-        col1, = st.columns(1)
+        if st.button("📄 Generate PDF Report"):
+            pdf_buffer = generate_pdf(df)
 
-        with col1:
-            if st.button("📄 Generate Report"):
-                file_bytes, filename = export_report(fig, df)
-                st.success(f"Report generated: {filename}")
+            st.success("PDF report generated")
 
-                st.download_button(
-                    "⬇️ Download Report",
-                    data=file_bytes,
-                    file_name=filename,
-                    mime="text/html"
-                )
+            st.download_button(
+                "⬇️ Download PDF",
+                data=pdf_buffer,
+                file_name="staggering_report.pdf",
+                mime="application/pdf"
+            )
 
         st.markdown("---")
         st.caption("Built with Streamlit | Josphat Njau")
