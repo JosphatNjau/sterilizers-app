@@ -5,16 +5,14 @@ import plotly.express as px
 import io
 import matplotlib.pyplot as plt
 
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
+from reportlab.platypus import SimpleDocTemplate, Image
 from reportlab.lib.pagesizes import A4, landscape
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.units import inch
 
 st.set_page_config(page_title="Sterilizer Staggering", layout="wide")
 
 st.title("📊 Sterilizer Staggering Report Generator")
 
-# Helper Functions
+# DATA PROCESSING
 @st.cache_data
 def process_data(df):
     df = df.copy()
@@ -26,10 +24,14 @@ def process_data(df):
         df['Date'].astype(str) + ' ' + df['process_time'].dt.strftime('%H:%M:%S')
     )
 
-    df.loc[(df['Shift'] == 'Night') & (df['datetime'].dt.hour < 12), 'datetime'] += pd.Timedelta(days=1)
+    # Night shift correction
+    df.loc[
+        (df['Shift'] == 'Night') & (df['datetime'].dt.hour < 12),
+        'datetime'
+    ] += pd.Timedelta(days=1)
 
     df['Staggering'] = np.where(
-        df['Sterilizer'].isin(['A','B','C','D']),
+        df['Sterilizer'].isin(['A', 'B', 'C', 'D']),
         'Bariquands',
         'Retorts'
     )
@@ -42,97 +44,87 @@ def process_data(df):
 
     return df.reset_index(drop=True)
 
+# STREAMLIT CHART (DISPLAY ONLY)
 def create_chart(df):
-    plot_date = pd.to_datetime(df['Date'].iloc[0]).strftime("%d/%m/%Y")
+    plot_date = pd.to_datetime(df['Date'].iloc[0]).strftime("%d/%m/%y")
 
     fig = px.line(
         df,
         x='datetime',
         y='sequence',
-        title=f"Sterilizers Staggering - {plot_date} - {df['Shift'].iloc[0]}",
         markers=True,
         text='label'
     )
 
     fig.update_traces(
-        marker=dict(size=8, symbol='diamond'),
+        marker=dict(size=9, symbol='diamond'),
         line=dict(width=2),
-        textposition='top left'
+        textposition='top center'
     )
 
-    fig.update_xaxes(
-        tickformat="%H:%M",
-        dtick=3600000,
-        title="Process Time"
+    fig.update_layout(
+        title=f"Sterilizer Staggering - Day - {plot_date}",
+        height=700,
+        width=1700,
+        showlegend=False,
+        margin=dict(l=40, r=40, t=80, b=40)
     )
-
-    fig.update_yaxes(title="Process Order")
-
-    fig.update_layout(height=700, width=1700)
 
     return fig
 
-# Matplotlib Chart for PDF
+# PDF EXPORT (MATPLOTLIB ONLY)
+def export_pdf(df):
+    buffer = io.BytesIO()
 
-def create_matplotlib_chart(df):
-    fig, ax = plt.subplots(figsize=(14, 6))
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(A4),
+        leftMargin=0,
+        rightMargin=0,
+        topMargin=0,
+        bottomMargin=0
+    )
 
-    ax.plot(df['datetime'], df['sequence'], marker='D')
+    # Matplotlib chart (print)
+    fig, ax = plt.subplots(figsize=(17, 10))
 
+    ax.plot(df['datetime'], df['sequence'], marker='D', linewidth=2)
+
+    # Labels above points
     for _, row in df.iterrows():
-        ax.text(row['datetime'], row['sequence'], row['label'], fontsize=7)
+        ax.text(
+            row['datetime'],
+            row['sequence'] + 0.15,
+            row['label'],
+            fontsize=9,
+            ha='center'
+        )
 
-    ax.set_title(f"Sterilizer Staggering - {df['Shift'].iloc[0]}")
-    ax.set_xlabel("Time")
-    ax.set_ylabel("Process Order")
+    # Title format required
+    plot_date = pd.to_datetime(df['Date'].iloc[0]).strftime("%d/%m/%y")
+    ax.set_title(f"Staggering - Day - {plot_date}", fontsize=20, pad=20)
+
+    ax.set_xlabel("")
+    ax.set_ylabel("")
+    ax.grid(True, linestyle="--", alpha=0.4)
 
     fig.autofmt_xdate()
 
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png', dpi=300, bbox_inches='tight')
+    # Save high-res image
+    img_buffer = io.BytesIO()
+    plt.savefig(img_buffer, format="png", dpi=200, bbox_inches="tight")
     plt.close(fig)
 
-    buf.seek(0)
-    return buf
+    img_buffer.seek(0)
 
-# PDF Generator (A4)
-def generate_pdf(df):
-    buffer = io.BytesIO()
-
-    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4))
-    styles = getSampleStyleSheet()
-
-    elements = []
-
-    # --- Header / Branding ---
-    title = Paragraph("<b>Sterilizer Staggering Report</b>", styles['Title'])
-    subtitle = Paragraph(
-        f"Date: {df['Date'].iloc[0].strftime('%d %b %Y')} | Shift: {df['Shift'].iloc[0]}",
-        styles['Normal']
-    )
-
-    elements.append(title)
-    elements.append(Spacer(1, 10))
-    elements.append(subtitle)
-    elements.append(Spacer(1, 20))
-
-    # --- Chart ---
-    chart_img = create_matplotlib_chart(df)
+    # PDF (full page image)
     page_width, page_height = landscape(A4)
 
-    # margins (default ~72 each side → subtract ~144 total)
-    usable_width = page_width - 100  
+    img = Image(img_buffer)
+    img.drawWidth = page_width
+    img.drawHeight = page_height
 
-    img = Image(chart_img, width=usable_width, height=usable_width * 0.55)
-
-    elements.append(img)
-    elements.append(Spacer(1, 20))
-
-    # --- Footer ---
-    footer = Paragraph("Generated via Streamlit | Josphat Njau", styles['Normal'])
-    elements.append(footer)
-
-    doc.build(elements)
+    doc.build([img])
 
     buffer.seek(0)
     return buffer
@@ -158,18 +150,21 @@ if uploaded_file:
         with st.expander("🔍 Preview Data"):
             st.dataframe(df.head())
 
+        # Display chart
         fig = create_chart(df)
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
 
+        # PDF button
         if st.button("📄 Generate PDF Report"):
-            pdf_buffer = generate_pdf(df)
 
-            st.success("PDF report generated")
+            pdf_buffer = export_pdf(df)
+
+            st.success("PDF generated successfully")
 
             st.download_button(
                 "⬇️ Download PDF",
                 data=pdf_buffer,
-                file_name="staggering_report.pdf",
+                file_name=f"staggering_{df['Shift'].iloc[0]}.pdf",
                 mime="application/pdf"
             )
 
