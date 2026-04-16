@@ -68,8 +68,8 @@ def create_chart(df):
     fig.update_yaxes(title="Process Order")
 
     fig.update_layout(
-        height=700,
-        width=1200,
+        height=1000,
+        width=1700,
         title_font=dict(family="Times New Roman", weight="bold", size=20)
     )
 
