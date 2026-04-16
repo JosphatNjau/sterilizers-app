@@ -96,10 +96,12 @@ def export_pdf(df):
         for i, row in df.iterrows():
             ax.text(
                 row['datetime'],
-                row['sequence'] + 0.2,
+                row['sequence'] + 0.25,
                 row['label'],
-                ha='center',
-                fontsize=8
+                ha='left',
+                va='bottom',
+                fontsize=12,
+                fontweight='bold'
             )
 
         ax.set_title(title, fontsize=18, fontweight='bold')
