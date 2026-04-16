@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 
 from reportlab.platypus import SimpleDocTemplate, Image
 from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.utils import ImageReader
+from reportlab.platypus import Spacer
 
 st.set_page_config(page_title="Sterilizer Staggering", layout="wide")
 
@@ -120,11 +122,18 @@ def export_pdf(df):
     # PDF (full page image)
     page_width, page_height = landscape(A4)
 
-    img = Image(img_buffer)
-    img.drawWidth = page_width
-    img.drawHeight = page_height
+    image = ImageReader(img_buffer)
 
-    doc.build([img])
+    img_width = page_width
+    img_height = page_height
+    
+    # maintain aspect ratio (IMPORTANT)
+    aspect = 1000 / 1700  # your design ratio
+    
+    img.drawWidth = img_width
+    img.drawHeight = img_width * aspect
+
+    doc.build([img], onFirstPage=lambda c, d: None)
 
     buffer.seek(0)
     return buffer
