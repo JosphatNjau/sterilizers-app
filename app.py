@@ -75,7 +75,7 @@ def create_chart(df):
 # Matplotlib Chart for PDF
 
 def create_matplotlib_chart(df):
-    fig, ax = plt.subplots(figsize=(14, =6))
+    fig, ax = plt.subplots(figsize=(14, 6))
 
     ax.plot(df['datetime'], df['sequence'], marker='D')
 
