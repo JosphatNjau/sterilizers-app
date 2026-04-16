@@ -6,7 +6,7 @@ import io
 import matplotlib.pyplot as plt
 
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
 
@@ -75,7 +75,7 @@ def create_chart(df):
 # Matplotlib Chart for PDF
 
 def create_matplotlib_chart(df):
-    fig, ax = plt.subplots(figsize=(11, 5))
+    fig, ax = plt.subplots(figsize=(14, =6))
 
     ax.plot(df['datetime'], df['sequence'], marker='D')
 
@@ -99,7 +99,7 @@ def create_matplotlib_chart(df):
 def generate_pdf(df):
     buffer = io.BytesIO()
 
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4))
     styles = getSampleStyleSheet()
 
     elements = []
@@ -118,7 +118,12 @@ def generate_pdf(df):
 
     # --- Chart ---
     chart_img = create_matplotlib_chart(df)
-    img = Image(chart_img, width=6.5 * inch, height=3.5 * inch)
+    page_width, page_height = landscape(A4)
+
+    # margins (default ~72 each side → subtract ~144 total)
+    usable_width = page_width - 100  
+
+    img = Image(chart_img, width=usable_width, height=usable_width * 0.55)
 
     elements.append(img)
     elements.append(Spacer(1, 20))
